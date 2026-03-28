@@ -8,51 +8,56 @@
 import SwiftUI
 
 struct HomeView: View {
-    // 观察 ViewModel 的变化
     @StateObject private var viewModel = HomeViewModel()
-    
-    // 物理参数定义
-    let spacing: CGFloat = 12
-    let cornerRadius: CGFloat = 16
+    @Namespace private var homeNamespace
     
     var body: some View {
+        // 方案：让 NavigationView 包裹整个交互区域
         NavigationView {
-            ScrollView {
-                if viewModel.isLoading {
-                    ProgressView("Fetching Art...")
-                        .padding(.top, 100)
-                } else {
-                    // 使用 HStack 实现两列
-                    HStack(alignment: .top, spacing: spacing) {
-                        
-                        // --- 左列 ---
-                        LazyVStack(spacing: spacing) {
+            ZStack {
+                // 层级 0：背景色
+                Color(.systemGroupedBackground).ignoresSafeArea()
+                
+                // 层级 1：瀑布流主体
+                ScrollView {
+                    // 探测器（可选）
+                     Text("Total: \(viewModel.leftColumn.count + viewModel.rightColumn.count)").font(.caption)
+                    
+                    HStack(alignment: .top, spacing: 12) {
+                        LazyVStack(spacing: 12) {
                             ForEach(viewModel.leftColumn) { wallpaper in
-                                WallpaperCard(wallpaper: wallpaper, cornerRadius: cornerRadius)
+                                WallpaperCard(wallpaper: wallpaper, cornerRadius: 16, viewModel: viewModel, namespace: homeNamespace)
                             }
                         }
-                        
-                        // --- 右列 ---
-                        LazyVStack(spacing: spacing) {
+                        LazyVStack(spacing: 12) {
                             ForEach(viewModel.rightColumn) { wallpaper in
-                                WallpaperCard(wallpaper: wallpaper, cornerRadius: cornerRadius)
+                                WallpaperCard(wallpaper: wallpaper, cornerRadius: 16, viewModel: viewModel, namespace: homeNamespace)
                             }
                         }
                     }
-                    .padding(.horizontal, spacing)
-                    .padding(.top, spacing)
+                    .padding(12)
+                }
+                // 💡 重点 1：标题必须挂在 ScrollView 上
+                .navigationTitle("The Collection")
+                // 💡 重点 2：如果你想要大标题效果，可以显式声明
+                .navigationBarTitleDisplayMode(.large)
+                .refreshable { await viewModel.fetchRealWallpapers() }
+                
+                // 层级 2：详情页 Overlay
+                if viewModel.showDetailPage, let wallpaper = viewModel.selectedWallpaper {
+                    WallpaperDetailView(
+                        wallpaper: wallpaper,
+                        viewModel: viewModel,
+                        namespace: homeNamespace
+                    )
+                    .transition(.move(edge: .bottom)) // 给详情页加个入场动画
+                    .zIndex(1) // 确保它在最上层
                 }
             }
-            .refreshable {
-                // 这里的 await 现在对应的是真正的异步操作
-                await viewModel.fetchRealWallpapers()
-            }
-            .task {
-                // 首次进入页面时自动加载
-                await viewModel.fetchRealWallpapers()
-            }
-            .navigationTitle("The Collection")
-            .background(Color(.systemGroupedBackground))
+        }
+        .navigationViewStyle(.stack)
+        .task {
+            await viewModel.fetchRealWallpapers()
         }
     }
 }
@@ -60,40 +65,40 @@ struct HomeView: View {
 struct WallpaperCard: View {
     let wallpaper: Wallpaper
     let cornerRadius: CGFloat
-    
-    // 强制使用竖屏壁纸比例 9:16
-    let targetAspectRatio: CGFloat = 9/16
+    @ObservedObject var viewModel: HomeViewModel
+    let namespace: Namespace.ID
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            AsyncImage(url: URL(string: wallpaper.imageUrl)) { phase in
-                switch phase {
-                case .empty:
-                    // 骨架屏占位：严格保持 9:16
-                    Rectangle()
-                        .fill(Color(.systemFill))
-                        .aspectRatio(targetAspectRatio, contentMode: .fill)
-                        
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill) // 填充模式
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        // 这里如果不强制高度，就会变成真正的错落瀑布流
-                        // 如果强制高度，就是宫格式布局
-                        
-                case .failure:
-                    Image(systemName: "photo")
-                        .aspectRatio(targetAspectRatio, contentMode: .fill)
-                @unknown default:
-                    EmptyView()
+        // 给 Button 一个明确的可点击范围
+        Button(action: {
+            withAnimation(.interactiveSpring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.5)) {
+                viewModel.selectedWallpaper = wallpaper
+                viewModel.showDetailPage = true
+            }
+        }) {
+            // 给这个 VStack 一个框架保底
+            VStack(spacing: 0) {
+                AsyncImage(url: URL(string: wallpaper.imageUrl)) { phase in
+                    if case .success(let image) = phase {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .matchedGeometryEffect(id: wallpaper.id.uuidString, in: namespace)
+                    } else {
+                        // 如果加载失败或加载中，必须有一个占位符撑开空间！
+                        Rectangle()
+                            .fill(Color(.systemFill))
+                            .aspectRatio(9/16, contentMode: .fill)
+                            .matchedGeometryEffect(id: wallpaper.id.uuidString, in: namespace)
+                    }
                 }
             }
-            .clipped() // 剪裁掉超出比例的部分
+            // 剪裁和圆角放在 Button 层面，或者里面，看具体效果
             .cornerRadius(cornerRadius)
+            .clipped()
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(cornerRadius)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        // 为了让 Button 不会把内容颜色变蓝，必须加上这句，但要确保里面有占位符
+        .buttonStyle(.plain)
     }
 }

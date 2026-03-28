@@ -12,6 +12,11 @@ class HomeViewModel: ObservableObject {
     @Published var leftColumn: [Wallpaper] = []
     @Published var rightColumn: [Wallpaper] = []
     @Published var isLoading = false
+    // --- Hero Animation 状态管理 ---
+    @Published var selectedWallpaper: Wallpaper? = nil // 当前被选中的壁纸
+    @Published var showDetailPage: Bool = false        // 是否显示详情页
+    // 用于动画的 Namespace ID
+    var namespaceId = UUID().uuidString
     
     // 用来记录已经加载过的图片 URL（作为唯一标识）
     private var loadedUrls = Set<String>()
@@ -24,7 +29,8 @@ class HomeViewModel: ObservableObject {
             
             do {
                 // 真正执行异步等待
-                let allImages = try await service.fetchAllImages(path: "Unsplash")
+                let allImages = try await service.fetchAllImages(path: "2026 Wallpaper")
+                print("DEBUG: GitHub 返回了 \(allImages.count) 张图片")
                 
                 let newImages = allImages.filter { !loadedUrls.contains($0.imageUrl) }
                 
@@ -42,5 +48,6 @@ class HomeViewModel: ObservableObject {
             
             isLoading = false
         }
+
 }
 
