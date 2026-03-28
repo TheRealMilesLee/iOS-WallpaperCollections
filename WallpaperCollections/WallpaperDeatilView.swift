@@ -18,8 +18,47 @@ struct WallpaperDetailView: View {
 
   var body: some View {
     ZStack(alignment: .bottom) { // 按钮放在底部
-                                 // ... 原有的全屏图片和背景代码 ...
-            
+      // 背景黑屏，带淡淡的渐变
+      Color.black
+        .ignoresSafeArea()
+        .opacity(viewModel.showDetailPage ? 1 : 0) // 这里可以加个背景淡入动画
+      
+        // 全屏图片
+      AsyncImage(url: URL(string: wallpaper.imageUrl)) { phase in
+        if case .success(let image) = phase {
+          image
+            .resizable()
+            .aspectRatio(contentMode: .fit) // 详情页通常是 .fit
+                                            // --- 核心 matchedGeometryEffect ---
+                                            // ID 必须和卡片里的 AsyncImage 一致
+            .matchedGeometryEffect(id: wallpaper.id.uuidString, in: namespace)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // 可选：添加手势返回
+      .gesture(
+        DragGesture().onEnded { value in
+          if value.translation.height > 100 { // 下滑返回
+            withAnimation(.spring()) {
+              viewModel.showDetailPage = false
+              viewModel.selectedWallpaper = nil
+            }
+          }
+        }
+      )
+        // 返回按钮
+      Button(action: {
+        withAnimation(.interactiveSpring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.5)) {
+          viewModel.showDetailPage = false
+          viewModel.selectedWallpaper = nil
+        }
+      }) {
+        Image(systemName: "xmark.circle.fill")
+          .font(.largeTitle)
+          .foregroundColor(.white.opacity(0.7))
+          .padding(.top, 60) // 适配刘海屏
+          .padding(.leading, 20)
+      }
         // 下载按钮
       Button(action: {
         downloadAndSaveImage()
@@ -101,3 +140,8 @@ struct BlurView: UIViewRepresentable {
   }
   func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
 }
+
+
+
+
+
