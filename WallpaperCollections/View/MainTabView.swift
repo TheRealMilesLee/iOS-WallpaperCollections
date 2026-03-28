@@ -31,13 +31,6 @@ struct MainTabView: View {
           Label("Search", systemImage: Tab.search.icon)
         }
         .tag(Tab.search)
-            
-        // 4. 个人中心
-      ProfileView()
-        .tabItem {
-          Label("Person", systemImage: Tab.person.icon)
-        }
-        .tag(Tab.person)
     }
       // 设置 AccentColor 保持你偏好的那种“工程审美”色调
     .accentColor(.primary)
