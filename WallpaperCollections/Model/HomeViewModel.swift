@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import Kingfisher
 
 class HomeViewModel: ObservableObject {
   @Published var leftColumn: [Wallpaper] = []
@@ -50,6 +51,8 @@ class HomeViewModel: ObservableObject {
           self.rightColumn.append(image)
         }
       }
+      let urls = newImages.compactMap { URL(string: $0.imageUrl) }
+      ImagePrefetcher(urls: urls).start() // 提前把图拉到本地
     } catch {
       print("Fetch error: \(error)")
     }
