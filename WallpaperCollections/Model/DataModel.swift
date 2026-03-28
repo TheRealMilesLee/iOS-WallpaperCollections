@@ -21,9 +21,11 @@ struct Wallpaper: Identifiable, Codable, Hashable {
   }
 }
 
-struct GitHubContent: Codable {
+struct GitHubContent: Codable, Identifiable {
+  var id: String { path }
+  
   let name: String
   let path: String
   let type: String // "dir" 或 "file"
-  let download_url: String? // 文件的原始地址
+  let download_url: String?
 }

@@ -69,4 +69,17 @@ class GitHubService {
     let extensions = [".jpg", ".jpeg", ".png", ".heic", ".webp"]
     return extensions.contains { name.lowercased().hasSuffix($0) }
   }
+  
+  func fetchCategories(at path: String = "") async throws -> [GitHubContent] {
+    let encodedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+    let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(encodedPath)"
+    
+    guard let url = URL(string: urlString) else { return [] }
+    
+    let (data, _) = try await URLSession.shared.data(from: url)
+    let allContents = try JSONDecoder().decode([GitHubContent].self, from: data)
+    
+      // 过滤出所有文件夹，排除掉 .git 等隐藏项
+    return allContents.filter { $0.type == "dir" && !$0.name.hasPrefix(".") }
+  }
 }

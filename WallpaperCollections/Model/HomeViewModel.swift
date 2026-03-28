@@ -23,7 +23,7 @@ class HomeViewModel: ObservableObject {
   private let service = GitHubService()
     
   @MainActor
-  func fetchRealWallpapers() async {
+  func fetchRealWallpapers(at path: String = "2026 Wallpaper") async {
     guard !isLoading else { return }
     isLoading = true
             
