@@ -45,11 +45,7 @@ class GitHubService {
           images.append(contentsOf: subImages)
         }
       } else if item.type == "file" && isImage(name: item.name) {
-          // 2. 核心替换逻辑：将 GitHub 的下载地址换成 jsDelivr 加速地址
-          // 原地址: raw.githubusercontent.com/...
-          // 目标地址: cdn.jsdelivr.net/gh/TheRealMilesLee/The-Wallpaper-Collection@main/path/to/image.jpg
-                
-        let cdnUrl = "https://cdn.jsdelivr.net/gh/\(owner)/\(repo)@\(branch)/\(item.path)"
+        let cdnUrl = "https://cdn.jsdmirror.com/gh/\(owner)/\(repo)@\(branch)/\(item.path)"
         let encodedCdnUrl = cdnUrl.addingPercentEncoding(
           withAllowedCharacters: .urlQueryAllowed
         ) ?? ""
