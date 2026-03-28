@@ -24,7 +24,12 @@ struct WallpaperDetailView: View {
         // 层级 1: 纯黑背景 + 点击返回手势
       Color.black
         .ignoresSafeArea()
-        .onTapGesture { dismissDetail() }
+        .onTapGesture {
+          withAnimation(.spring()) {
+            viewModel.showDetailPage = false
+            viewModel.selectedWallpaper = nil
+          }
+        }
       
         // 层级 2: 主图展示
       KFImage(URL(string: wallpaper.imageUrl))
@@ -106,8 +111,9 @@ struct WallpaperDetailView: View {
         }
       }
     }
+    
       // 💡 沉浸式：进入详情页时隐藏状态栏
-    .statusBar(hidden: true)
+    .statusBar(hidden: viewModel.showDetailPage)
   }
   
     // MARK: - Logic Functions
