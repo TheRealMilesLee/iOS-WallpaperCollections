@@ -9,41 +9,38 @@ import Foundation
 import Combine
 
 class HomeViewModel: ObservableObject {
-    // 公开给 View 观察的两列数据
     @Published var leftColumn: [Wallpaper] = []
     @Published var rightColumn: [Wallpaper] = []
     @Published var isLoading = false
     
-    init() {
-        // 初始化时加载数据
-        fetchWallpapers()
-    }
+    // 用来记录已经加载过的图片 URL（作为唯一标识）
+    private var loadedUrls = Set<String>()
+    private let service = GitHubService()
     
-    func fetchWallpapers() {
-        isLoading = true
-        
-        // 模拟网络请求延迟
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            // 这里是 Mock 数据，基于你的 GitHub 仓库结构假设
-            let mockData = [
-                Wallpaper(imageUrl: "https://raw.githubusercontent.com/TheRealMilesLee/The-Wallpaper-Collection/main/images/mountain_01.jpg", author: "Miles", width: 400, height: 600),
-                Wallpaper(imageUrl: "https://raw.githubusercontent.com/TheRealMilesLee/The-Wallpaper-Collection/main/images/city_01.jpg", author: "Urban Shot", width: 400, height: 300),
-                Wallpaper(imageUrl: "https://raw.githubusercontent.com/TheRealMilesLee/The-Wallpaper-Collection/main/images/minimal_01.jpg", author: "Zen", width: 400, height: 400),
-                Wallpaper(imageUrl: "https://raw.githubusercontent.com/TheRealMilesLee/The-Wallpaper-Collection/main/images/abstract_01.jpg", author: "AI Art", width: 400, height: 700),
-                Wallpaper(imageUrl: "https://raw.githubusercontent.com/TheRealMilesLee/The-Wallpaper-Collection/main/images/nature_02.jpg", author: "Forest", width: 400, height: 550)
-            ]
+    @MainActor
+        func fetchRealWallpapers() async {
+            guard !isLoading else { return }
+            isLoading = true
             
-            // 简单的瀑布流分配算法：
-            // 为了保持两列高度接近，我们比较当前两列的数据量（真实算法需要比较高度之和）
-            for (index, wallpaper) in mockData.enumerated() {
-                if index % 2 == 0 {
-                    self.leftColumn.append(wallpaper)
-                } else {
-                    self.rightColumn.append(wallpaper)
+            do {
+                // 真正执行异步等待
+                let allImages = try await service.fetchAllImages(path: "Unsplash")
+                
+                let newImages = allImages.filter { !loadedUrls.contains($0.imageUrl) }
+                
+                for image in newImages {
+                    self.loadedUrls.insert(image.imageUrl)
+                    if self.leftColumn.count <= self.rightColumn.count {
+                        self.leftColumn.append(image)
+                    } else {
+                        self.rightColumn.append(image)
+                    }
                 }
+            } catch {
+                print("Fetch failed: \(error)")
             }
             
-            self.isLoading = false
+            isLoading = false
         }
-    }
 }
+

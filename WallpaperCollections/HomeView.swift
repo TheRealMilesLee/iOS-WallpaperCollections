@@ -43,16 +43,16 @@ struct HomeView: View {
                     .padding(.top, spacing)
                 }
             }
+            .refreshable {
+                // 这里的 await 现在对应的是真正的异步操作
+                await viewModel.fetchRealWallpapers()
+            }
+            .task {
+                // 首次进入页面时自动加载
+                await viewModel.fetchRealWallpapers()
+            }
             .navigationTitle("The Collection")
             .background(Color(.systemGroupedBackground))
-            // 添加刷新按钮，方便调试
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { viewModel.fetchWallpapers() }) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-            }
         }
     }
 }
@@ -61,55 +61,39 @@ struct WallpaperCard: View {
     let wallpaper: Wallpaper
     let cornerRadius: CGFloat
     
+    // 强制使用竖屏壁纸比例 9:16
+    let targetAspectRatio: CGFloat = 9/16
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // SwiftUI 3+ 的异步图片加载
+        VStack(alignment: .leading, spacing: 0) {
             AsyncImage(url: URL(string: wallpaper.imageUrl)) { phase in
                 switch phase {
                 case .empty:
-                    // 1. 占位状态：核心是保持宽高比！
-                    Color(.systemFill)
-                        .aspectRatio(wallpaper.aspectRatio, contentMode: .fit)
-                        .cornerRadius(cornerRadius)
+                    // 骨架屏占位：严格保持 9:16
+                    Rectangle()
+                        .fill(Color(.systemFill))
+                        .aspectRatio(targetAspectRatio, contentMode: .fill)
                         
                 case .success(let image):
-                    // 2. 加载成功
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fit) // 必须是 .fit 才能保持其原始比例
-                        .cornerRadius(cornerRadius)
-                        .transition(.opacity.animation(.default)) // 淡淡的渐变动画
+                        .aspectRatio(contentMode: .fill) // 填充模式
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        // 这里如果不强制高度，就会变成真正的错落瀑布流
+                        // 如果强制高度，就是宫格式布局
                         
-                case .failure(_):
-                    // 3. 加载失败
-                    VStack {
-                        Image(systemName: "wifi.exclamationmark")
-                            .font(.largeTitle)
-                        Text("Load Failed")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(wallpaper.aspectRatio, contentMode: .fit) // 保持比例
-                    .background(Color(.secondarySystemFill))
-                    .cornerRadius(cornerRadius)
-                    
+                case .failure:
+                    Image(systemName: "photo")
+                        .aspectRatio(targetAspectRatio, contentMode: .fill)
                 @unknown default:
                     EmptyView()
                 }
             }
-            
-            // 作者信息
-            Text(wallpaper.author)
-                .font(.caption2)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .padding(.horizontal, 6)
-                .padding(.bottom, 4)
+            .clipped() // 剪裁掉超出比例的部分
+            .cornerRadius(cornerRadius)
         }
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(cornerRadius)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }

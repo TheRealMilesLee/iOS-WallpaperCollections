@@ -20,3 +20,10 @@ struct Wallpaper: Identifiable, Codable, Hashable {
         return width / height
     }
 }
+
+struct GitHubContent: Codable {
+    let name: String
+    let path: String
+    let type: String // "dir" 或 "file"
+    let download_url: String? // 文件的原始地址
+}
