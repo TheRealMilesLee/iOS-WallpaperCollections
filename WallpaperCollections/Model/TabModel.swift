@@ -9,7 +9,6 @@ enum Tab: String, CaseIterable {
   case home = "Home"
   case browse = "Browse"
   case search = "Search"
-  case person = "Person"
     
     // 映射对应的图标 (SF Symbols)
   var icon: String {
@@ -17,7 +16,6 @@ enum Tab: String, CaseIterable {
       case .home: return "house.fill"
       case .browse: return "folder.fill"
       case .search: return "magnifyingglass"
-      case .person: return "person.fill"
     }
   }
 }
